@@ -1,16 +1,18 @@
 import requests
 import json
 from bs4 import BeautifulSoup
+import re
 
 safety_check_url = 'https://safety.mju.ac.kr/Safety/LabCheckDayly/Index?LabNo=39061'
 login_page_url = 'https://sso1.mju.ac.kr/login.do?redirect_uri=http://safety.mju.ac.kr/sso/LoginCheck_SSO.aspx'
 user_check_url = 'https://sso1.mju.ac.kr/mju/userCheck.do'
 ajax_login_url = 'https://sso1.mju.ac.kr/login/ajaxActionLogin2.do'
 sso_login_url = 'https://sso1.mju.ac.kr/oauth2/token2.do'
-session_url = 'https://safety.mju.ac.kr/sso/SSO_OK.aspx?uid=82210002'
+session_url = 'https://safety.mju.ac.kr/sso/SSO_OK.aspx'
+# session_url = 'https://safety.mju.ac.kr/sso/SSO_OK.aspx?uid=82210002'
            
 login_info = {"id":"82210002", "passwrd":"Ayongho_98"}
-sso_login_info = {"user_id":"82210002", "user_pwd":"Ayongho_98"}
+sso_login_info = {"user_id":"82210002", "user_pwd":"Ayongho_98", "client_id2":"", "redirect_uri": "http://safety.mju.ac.kr/sso/LoginCheck_SSO.aspx"}
 
 headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36','Referer': login_page_url}
 with requests.Session() as s:
@@ -20,21 +22,22 @@ with requests.Session() as s:
 
     print('userCheck.do\n')
     user_check = s.post(user_check_url, data=login_info, headers=headers, cookies=cookies)
-
+    
     print('ajaxActionLogin2.do\n')
-
     ajax_login = s.post(ajax_login_url, data=login_info, headers=headers, cookies=cookies,
     allow_redirects=False)
-    
+
     print('token2.do\n')
     sso_login = s.post(sso_login_url, data=sso_login_info, headers=headers, cookies=cookies,
     allow_redirects=False)
-    token = {"Cookie":sso_login.headers['Set-Cookie'].split(';')[0]}
+
+    pattern = r'access_token=([^;]+)|refresh_token=([^;]+)'
+    tokens = re.findall(pattern, sso_login.headers['Set-Cookie'])
+    access_token, refresh_token = tokens[0][0], tokens[1][1]
+    token = {"Cookie":f"access_token={access_token};refresh_token={refresh_token}"}
 
     print('Get Session\n')
-    final_login = s.get(session_url, cookies=token, allow_redirects=False)
-    print(final_login.headers['Set-Cookie'].split(';')[0])
-
+    final_login = s.post(session_url, data={"empid":"6aiFuENts/V0eaHMLdAyKw=="}, cookies=token, allow_redirects=False) # empid는 크롬 브라우저로 들어가서 개발자 툴에서 조회
     session = {'Cookie': sso_login.headers['Set-Cookie'].split(';')[0] + 
                 final_login.headers['Set-Cookie'].split(';')[0]}
 
@@ -48,7 +51,7 @@ with requests.Session() as s:
     check_data = {
         'LabNo': '39061',
 'LabCheckNo': '0',
-'AskDay': '2021-03-11 오전 12:00:00',
+'AskDay': '2024-03-21 오전 12:00:00',
 'Proper_1': 'on',
 'ElementNo': '81',
 'Proper': '1',
